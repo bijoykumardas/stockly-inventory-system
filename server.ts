@@ -6,7 +6,6 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import { 
   User, Product, Customer, Supplier, Purchase, Sale, DashboardStats 
 } from './src/types.js'; // Ensure file exists or use types directly
@@ -48,11 +47,26 @@ function initializeDB() {
     fs.mkdirSync(DB_DIR, { recursive: true });
   }
 
+  // Ensure DB_PATH is writable if it already exists to prevent EACCES issues under Vercel
+  if (fs.existsSync(DB_PATH)) {
+    try {
+      fs.chmodSync(DB_PATH, 0o666);
+    } catch (e) {
+      console.warn('Cannot check or change DB permissions, attempting recreate:', e);
+      try {
+        fs.unlinkSync(DB_PATH);
+      } catch (err) {
+        console.error('Failed to remove potentially locked database file:', err);
+      }
+    }
+  }
+
   if (!fs.existsSync(DB_PATH)) {
     const seedPath = path.join(process.cwd(), 'data', 'db.json');
     if (process.env.VERCEL && fs.existsSync(seedPath)) {
       try {
-        fs.copyFileSync(seedPath, DB_PATH);
+        const data = fs.readFileSync(seedPath, 'utf-8');
+        fs.writeFileSync(DB_PATH, data, { encoding: 'utf-8', mode: 0o666 });
         console.log('Seeded database from template db.json successfully on Vercel.');
         return;
       } catch (e) {
@@ -234,7 +248,11 @@ function initializeDB() {
         }
       ]
     };
-    fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
+    try {
+      fs.writeFileSync(DB_PATH, JSON.stringify(defaultData, null, 2), 'utf-8');
+    } catch (e) {
+      console.error('Failed to write initial db.json database on startup:', e);
+    }
   }
 }
 
@@ -423,7 +441,15 @@ setTimeout(() => {
 function loadDB(): LocalDB {
   try {
     const rawData = fs.readFileSync(DB_PATH, 'utf-8');
-    return JSON.parse(rawData);
+    const db = JSON.parse(rawData);
+    return {
+      users: Array.isArray(db?.users) ? db.users : [],
+      products: Array.isArray(db?.products) ? db.products : [],
+      customers: Array.isArray(db?.customers) ? db.customers : [],
+      suppliers: Array.isArray(db?.suppliers) ? db.suppliers : [],
+      purchases: Array.isArray(db?.purchases) ? db.purchases : [],
+      sales: Array.isArray(db?.sales) ? db.sales : []
+    };
   } catch (error) {
     console.error('Error reading DB:', error);
     return { users: [], products: [], customers: [], suppliers: [], purchases: [], sales: [] };
@@ -432,7 +458,8 @@ function loadDB(): LocalDB {
 
 function saveDB(data: LocalDB) {
   try {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2), 'utf-8');
+    const serialized = JSON.stringify(data, null, 2);
+    fs.writeFileSync(DB_PATH, serialized, { encoding: 'utf-8', mode: 0o666 });
   } catch (error) {
     console.error('Error saving DB:', error);
   }
@@ -481,24 +508,33 @@ declare global {
 
 // Login
 app.post('/api/auth/login', (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Please provide both email and password' });
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Please provide both email and password' });
+    }
+
+    const db = loadDB();
+    if (!db || !db.users) {
+      return res.status(500).json({ error: 'Local database is not initialized correctly.' });
+    }
+
+    const user = db.users.find(u => u.email && u.email.toLowerCase() === email.toLowerCase());
+
+    if (!user || user.passwordHash !== password) {
+      return res.status(400).json({ error: 'Invalid email or password' });
+    }
+
+    // Generate User package (simulate token with user's ID)
+    const { passwordHash, ...userResponse } = user;
+    res.json({
+      token: user.id,
+      user: userResponse
+    });
+  } catch (error: any) {
+    console.error('Login routing exception caught:', error);
+    res.status(500).json({ error: error.message || 'Internal server error occurred during login authentication.' });
   }
-
-  const db = loadDB();
-  const user = db.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-
-  if (!user || user.passwordHash !== password) {
-    return res.status(400).json({ error: 'Invalid email or password' });
-  }
-
-  // Generate User package (simulate token with user's ID)
-  const { passwordHash, ...userResponse } = user;
-  res.json({
-    token: user.id,
-    user: userResponse
-  });
 });
 
 // Register
@@ -1192,7 +1228,8 @@ app.post('/api/supabase/sync', requireAuth, async (req, res) => {
 // Vite middleware for integrated frontend development
 const setupVite = async () => {
   if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
+    const { createServer } = await import('vite');
+    const vite = await createServer({
       server: { middlewareMode: true },
       appType: 'spa',
     });
