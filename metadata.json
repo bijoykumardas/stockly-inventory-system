@@ -1,0 +1,6 @@
+{
+  "name": "Inventory Management System",
+  "description": "A comprehensive full-stack and multi-user inventory tracking system featuring GST invoicing, supplier-purchasing, and sales management with role-based access.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
