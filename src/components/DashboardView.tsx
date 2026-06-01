@@ -54,9 +54,11 @@ export default function DashboardView({ token }: DashboardViewProps) {
   const fetchSupabaseStatus = async () => {
     setCheckingSupabase(true);
     try {
-      const response = await fetch('/api/supabase/status', {
+      const response = await fetch(`/api/supabase/status?_=${Date.now()}`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Pragma': 'no-cache',
+          'Cache-Control': 'no-cache'
         }
       });
       if (response.ok) {

@@ -1209,6 +1209,12 @@ app.get('/api/supabase/status', requireAuth, async (req, res) => {
   try {
     const status = await checkSupabaseStatus();
     supabaseStatus = status;
+    
+    // Disable any potential caching on CDN, Vercel, or browser layers
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
     res.json({
       ...status,
       schema: SUPABASE_SQL_SCHEMA
