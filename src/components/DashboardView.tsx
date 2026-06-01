@@ -168,16 +168,16 @@ export default function DashboardView({ token }: DashboardViewProps) {
   }
 
   return (
-    <div className="p-8 space-y-8 overflow-y-auto max-h-screen">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 overflow-y-auto max-h-screen">
       {/* Page Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Active Overview</h2>
+          <h2 className="text-xl md:text-2xl font-extrabold text-slate-900 tracking-tight">Active Overview</h2>
           <p className="text-xs text-slate-500">Live indicators, stock alerts and Indian GST accounting metrics</p>
         </div>
         <button
           onClick={fetchStats}
-          className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-600 transition-all cursor-pointer shadow-sm"
+          className="flex items-center gap-2 px-3 py-1.5 border border-slate-200 rounded-xl hover:bg-slate-50 text-xs font-semibold text-slate-600 transition-all cursor-pointer shadow-sm w-fit shrink-0 font-mono"
         >
           <RefreshCw className="h-3.5 w-3.5" />
           Refresh Stats
@@ -221,7 +221,9 @@ export default function DashboardView({ token }: DashboardViewProps) {
               <div>
                 <h3 className="text-base font-extrabold tracking-tight">Active Supabase Workspace</h3>
                 <p className="text-xs text-slate-300 font-medium leading-relaxed mt-1">
-                  {supabaseStatus.connected && supabaseStatus.missingTables.length === 0 ? (
+                  {!supabaseStatus.configured ? (
+                    "Supabase credentials are not found in the environment. If you are deploying or hosting on Vercel, navigate to your Vercel Project Dashboard -> Settings -> Environment Variables, add SUPABASE_URL and SUPABASE_ANON_KEY (copied from your Supabase Project Settings API tab), and trigger a fresh deployment."
+                  ) : supabaseStatus.connected && supabaseStatus.missingTables.length === 0 ? (
                     "Your cloud database is connected. All inventory catalog lists, registered accounts, client details, purchases, and sales ledgers are synced in real-time."
                   ) : supabaseStatus.missingTables.length > 0 ? (
                     `Credentials verified, but some tables are missing: ${supabaseStatus.missingTables.join(', ')}. Click "Configure SQL Tables" to view and run the SQL migration script.`

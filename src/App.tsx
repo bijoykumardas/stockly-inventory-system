@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { Menu } from 'lucide-react';
 import AuthView from './components/AuthView.js';
 import Sidebar from './components/Sidebar.js';
 import DashboardView from './components/DashboardView.js';
@@ -16,11 +17,22 @@ import UserManagementView from './components/UserManagementView.js';
 import { User } from './types.js';
 import { ConfirmationProvider } from './context/ConfirmationContext.js';
 
+const tabTitles: Record<string, string> = {
+  dashboard: 'Overview',
+  inventory: 'Inventory Catalog',
+  sales: 'Sales & Invoices',
+  purchases: 'Stock Purchases',
+  customers: 'Customers Directory',
+  suppliers: 'Suppliers Directory',
+  users: 'User Operations',
+};
+
 export default function App() {
   const [token, setToken] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Authenticated state validation on boot
   useEffect(() => {
@@ -92,17 +104,41 @@ export default function App() {
   // Authenticated Dashboard Layout
   return (
     <ConfirmationProvider>
-      <div className="h-screen flex bg-slate-50 overflow-hidden font-sans">
+      <div className="h-screen flex bg-slate-50 overflow-hidden font-sans relative">
         {/* Sidebar Navigation Panel */}
         <Sidebar 
           currentTab={activeTab} 
           onChangeTab={setActiveTab} 
           user={user} 
           onLogout={handleLogout} 
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
 
         {/* Main Panel Viewport */}
         <main className="flex-1 overflow-hidden flex flex-col min-w-0 bg-slate-50">
+          {/* Mobile Top App Bar */}
+          <header className="flex md:hidden items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 text-white shrink-0">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="p-1.5 hover:bg-slate-800 rounded-xl text-slate-300 hover:text-white transition-colors"
+                id="mobile-menu-toggle"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black uppercase tracking-wider text-indigo-400">Stockly ERP</span>
+                <h1 className="text-xs font-black tracking-tight -mt-0.5">{tabTitles[activeTab] || 'Active Tab'}</h1>
+              </div>
+            </div>
+            
+            <div className="h-7 w-7 rounded-full bg-indigo-600 border border-indigo-500 flex items-center justify-center font-extrabold text-[10px] text-white">
+              {user.name.split(' ').map(n => n[0]).join('')}
+            </div>
+          </header>
+
           <div className="flex-1 relative overflow-auto min-w-0">
             {activeTab === 'dashboard' && <DashboardView token={token} />}
             {activeTab === 'inventory' && <InventoryView token={token} />}

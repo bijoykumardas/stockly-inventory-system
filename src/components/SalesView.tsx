@@ -421,9 +421,9 @@ export default function SalesView({ token }: SalesViewProps) {
   );
 
   return (
-    <div className="p-8 space-y-6 overflow-y-auto max-h-screen">
+    <div className="p-4 md:p-8 space-y-6 overflow-y-auto max-h-screen">
       {/* View Header */}
-      <div className="flex justify-between items-center print:hidden">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 print:hidden">
         <div>
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Sales Registers</h2>
           <p className="text-xs text-slate-500">Log client bills and checkout items. Deducts inventory stock instantly with automated GST formulas</p>

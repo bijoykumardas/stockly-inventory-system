@@ -327,7 +327,7 @@ async function checkSupabaseStatus() {
     configured: true,
     missingTables,
     error: connectionError || (missingTables.length > 0 ? 'Some database tables are missing in Supabase.' : ''),
-    url: process.env.SUPABASE_URL || ''
+    url: process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || ''
   };
 }
 

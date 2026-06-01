@@ -154,9 +154,9 @@ export default function UserManagementView({ token }: UserManagementViewProps) {
   };
 
   return (
-    <div className="p-8 space-y-6 overflow-y-auto max-h-screen">
+    <div className="p-4 md:p-8 space-y-6 overflow-y-auto max-h-screen">
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Onboard & Permissions</h2>
           <p className="text-xs text-slate-500">Configure administrator access, register warehouse staff, and view access limits</p>
