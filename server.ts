@@ -14,11 +14,24 @@ import { supabase, isSupabaseConfigured, SUPABASE_SQL_SCHEMA } from './supabase.
 
 const app = express();
 const PORT = 3000;
-const DB_DIR = path.join(process.cwd(), 'data');
+const DB_DIR = process.env.VERCEL 
+  ? '/tmp' 
+  : path.join(process.cwd(), 'data');
 const DB_PATH = path.join(DB_DIR, 'db.json');
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Custom lightweight CORS middleware to prevent cross-origin issues across environments
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  next();
+});
 
 // Database initialization
 interface LocalDB {
@@ -36,6 +49,16 @@ function initializeDB() {
   }
 
   if (!fs.existsSync(DB_PATH)) {
+    const seedPath = path.join(process.cwd(), 'data', 'db.json');
+    if (process.env.VERCEL && fs.existsSync(seedPath)) {
+      try {
+        fs.copyFileSync(seedPath, DB_PATH);
+        console.log('Seeded database from template db.json successfully on Vercel.');
+        return;
+      } catch (e) {
+        console.error('Failed to copy seed database on Vercel:', e);
+      }
+    }
     const defaultData: LocalDB = {
       users: [
         {
@@ -1183,8 +1206,12 @@ const setupVite = async () => {
   }
 };
 
-setupVite().then(() => {
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Inventory Management System server live at http://localhost:${PORT}`);
+if (!process.env.VERCEL) {
+  setupVite().then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Inventory Management System server live at http://localhost:${PORT}`);
+    });
   });
-});
+}
+
+export default app;
