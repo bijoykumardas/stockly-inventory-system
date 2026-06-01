@@ -273,7 +273,7 @@ async function checkSupabaseStatus() {
     return {
       connected: false,
       configured: false,
-      missingTables: ['users', 'products', 'customers', 'suppliers', 'purchases', 'sales'],
+      missingTables: [],
       error: 'Supabase URL or Anonymous Key is missing in environment variables (.env).'
     };
   }
@@ -289,19 +289,22 @@ async function checkSupabaseStatus() {
       const { data, error } = await supabase.from(table).select('id').limit(1);
       if (error) {
         console.error(`[Supabase Status] Error checking "${table}":`, error);
-        // PG 42P01: relation does not exist
-        if (error.code === '42P01' || (error.message && error.message.includes('does not exist'))) {
+        
+        // Let's check for specific PostgreSQL / PostgREST error codes:
+        const isMsgNotExist = error.message && error.message.toLowerCase().includes('does not exist');
+        if (error.code === '42P01' || isMsgNotExist) {
+          // Table definitely does not exist
           missingTables.push(table);
-        } else if (error.code === '42501' || (error.message && error.message.includes('permission denied'))) {
+        } else if (error.code === '42501' || (error.message && error.message.toLowerCase().includes('permission denied'))) {
           // Table exists! But SELECT privilege is denied due to RLS or missing GRANT permissions.
           console.log(`[Supabase Status] Table "${table}" exists, but permission is denied (42501)`);
           anySuccess = true;
-        } else if (error.code === 'PGRST116' || (error.message && error.message.includes('no rows'))) {
+        } else if (error.code === 'PGRST116' || (error.message && error.message.toLowerCase().includes('no rows'))) {
           // PGRST116 means the table exists, but query failed because filtering issues (or just empty)
           console.log(`[Supabase Status] Table "${table}" exists but is empty/unavailable (PGRST116)`);
           anySuccess = true;
         } else {
-          missingTables.push(table);
+          // General connection, auth, or query error (e.g. invalid API key, fetch error, invalid host)
           connectionError = error.message;
         }
       } else {
@@ -310,20 +313,21 @@ async function checkSupabaseStatus() {
       }
     } catch (err: any) {
       console.error(`[Supabase Status] Exception checking table "${table}":`, err);
-      missingTables.push(table);
       connectionError = err.message || String(err);
     }
   }
 
+  // If there's a general connection error (like invalid API key) and no table actually succeeded, it's a connection failure
   const isConnected = anySuccess && connectionError === '';
 
   console.log(`[Supabase Status Summary] anySuccess: ${anySuccess}, isConnected: ${isConnected}, connectionError: "${connectionError}", missingTables:`, missingTables);
 
   return {
-    connected: isConnected || anySuccess,
+    connected: isConnected || (anySuccess && !connectionError),
     configured: true,
     missingTables,
-    error: connectionError || (missingTables.length > 0 ? 'Some database tables are missing in Supabase.' : '')
+    error: connectionError || (missingTables.length > 0 ? 'Some database tables are missing in Supabase.' : ''),
+    url: process.env.SUPABASE_URL || ''
   };
 }
 

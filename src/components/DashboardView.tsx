@@ -42,6 +42,7 @@ export default function DashboardView({ token }: DashboardViewProps) {
     missingTables: string[];
     error: string;
     schema: string;
+    url?: string;
   } | null>(null);
   const [checkingSupabase, setCheckingSupabase] = useState(false);
   const [syncingSupabase, setSyncingSupabase] = useState(false);
@@ -221,20 +222,33 @@ export default function DashboardView({ token }: DashboardViewProps) {
                   {supabaseStatus.connected && supabaseStatus.missingTables.length === 0 ? (
                     "Your cloud database is connected. All inventory catalog lists, registered accounts, client details, purchases, and sales ledgers are synced in real-time."
                   ) : supabaseStatus.missingTables.length > 0 ? (
-                    `Credentials verified! Create the required tables in your Supabase project. Click "Configure SQL Tables" to view or copy the SQL schema script.`
+                    `Credentials verified, but some tables are missing: ${supabaseStatus.missingTables.join(', ')}. Click "Configure SQL Tables" to view and run the SQL migration script.`
                   ) : (
-                    "Database credentials are valid, but connection validation failed. Please check your Supabase dashboard or paste SQL Tables to retry."
+                    "Database credentials are valid, but connection validation failed. Please check your Supabase dashboard or check your credentials."
                   )}
                 </p>
+                {supabaseStatus.error && (
+                  <div className="mt-1.5 text-[11px] text-amber-300/90 font-mono bg-amber-500/10 inline-block px-2.5 py-1 rounded-lg border border-amber-500/20 max-w-full overflow-x-auto whitespace-pre-wrap">
+                    Error trace: {supabaseStatus.error}
+                  </div>
+                )}
               </div>
 
               {/* Service URL and Project details */}
               <div className="flex flex-wrap gap-x-5 gap-y-1.5 pt-1">
                 <span className="font-mono text-[10px] text-zinc-400">
-                  <strong className="text-indigo-300">URL:</strong> https://xsvuwgqsfmpiqdkopvtw.supabase.co
+                  <strong className="text-indigo-300">URL:</strong> {supabaseStatus.url || "https://xsvuwgqsfmpiqdkopvtw.supabase.co"}
                 </span>
                 <span className="font-mono text-[10px] text-zinc-400">
-                  <strong className="text-indigo-300">Project ID:</strong> xsvuwgqsfmpiqdkopvtw
+                  <strong className="text-indigo-300">Project ID:</strong> {(() => {
+                    const displayUrl = supabaseStatus.url || "https://xsvuwgqsfmpiqdkopvtw.supabase.co";
+                    try {
+                      const match = displayUrl.match(/https?:\/\/([^.]+)\.supabase/);
+                      return (match && match[1]) ? match[1] : displayUrl;
+                    } catch (e) {
+                      return "unknown";
+                    }
+                  })()}
                 </span>
               </div>
               
